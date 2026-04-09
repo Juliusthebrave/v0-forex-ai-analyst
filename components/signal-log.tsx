@@ -1,27 +1,57 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { ForexSignal } from '@/lib/types';
-import { TrendingUp, TrendingDown, Minus, Send, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Send, Clock, Plus, X } from 'lucide-react';
 
-// Fixed symbols for tab navigation
-const TRACKED_SYMBOLS = ['XAUUSD', 'BTCUSD', 'EURUSD'];
+// Default symbols for tab navigation
+const DEFAULT_SYMBOLS = ['XAUUSD', 'BTCUSD', 'EURUSD'];
 
 interface SignalLogProps {
   signals: ForexSignal[];
 }
 
 export function SignalLog({ signals }: SignalLogProps) {
+  const [trackedSymbols, setTrackedSymbols] = useState<string[]>(DEFAULT_SYMBOLS);
+  const [activeTab, setActiveTab] = useState(DEFAULT_SYMBOLS[0]);
+  const [newSymbol, setNewSymbol] = useState('');
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
   // Group signals by symbol
   const signalsBySymbol = useMemo(() => {
     const grouped: Record<string, ForexSignal[]> = {};
-    TRACKED_SYMBOLS.forEach(symbol => {
+    trackedSymbols.forEach(symbol => {
       grouped[symbol] = signals.filter(s => s.symbol === symbol);
     });
     return grouped;
-  }, [signals]);
+  }, [signals, trackedSymbols]);
+
+  const handleAddSymbol = () => {
+    const symbol = newSymbol.trim().toUpperCase();
+    if (symbol && !trackedSymbols.includes(symbol)) {
+      setTrackedSymbols(prev => [...prev, symbol]);
+      setActiveTab(symbol);
+      setNewSymbol('');
+      setPopoverOpen(false);
+    }
+  };
+
+  const handleRemoveSymbol = (symbolToRemove: string) => {
+    if (trackedSymbols.length <= 1) return; // Keep at least one tab
+    
+    setTrackedSymbols(prev => prev.filter(s => s !== symbolToRemove));
+    
+    // If we're removing the active tab, switch to the first remaining tab
+    if (activeTab === symbolToRemove) {
+      const remaining = trackedSymbols.filter(s => s !== symbolToRemove);
+      setActiveTab(remaining[0]);
+    }
+  };
 
   const getSignalIcon = (signal: ForexSignal['signal']) => {
     switch (signal) {
@@ -163,25 +193,71 @@ export function SignalLog({ signals }: SignalLogProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-4">Recent Signals</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-foreground">Recent Signals</h2>
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              Add Market
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64">
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-foreground">Add New Market</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. GBPUSD"
+                  value={newSymbol}
+                  onChange={(e) => setNewSymbol(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSymbol()}
+                  className="flex-1"
+                />
+                <Button size="sm" onClick={handleAddSymbol} disabled={!newSymbol.trim()}>
+                  Add
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter the symbol exactly as it appears in MT5
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
       
-      <Tabs defaultValue={TRACKED_SYMBOLS[0]} className="w-full">
-        <TabsList className="w-full grid grid-cols-3 mb-4">
-          {TRACKED_SYMBOLS.map(symbol => (
-            <TabsTrigger key={symbol} value={symbol} className="text-sm">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="w-full flex flex-wrap gap-1 h-auto p-1 mb-4">
+          {trackedSymbols.map(symbol => (
+            <TabsTrigger 
+              key={symbol} 
+              value={symbol} 
+              className="text-sm flex-1 min-w-fit relative group pr-7"
+            >
               {symbol}
-              {signalsBySymbol[symbol].length > 0 && (
+              {signalsBySymbol[symbol]?.length > 0 && (
                 <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
                   {signalsBySymbol[symbol].length}
                 </span>
+              )}
+              {trackedSymbols.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveSymbol(symbol);
+                  }}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-destructive/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label={`Remove ${symbol}`}
+                >
+                  <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                </button>
               )}
             </TabsTrigger>
           ))}
         </TabsList>
         
-        {TRACKED_SYMBOLS.map(symbol => (
+        {trackedSymbols.map(symbol => (
           <TabsContent key={symbol} value={symbol}>
-            {signalsBySymbol[symbol].length > 0 ? (
+            {signalsBySymbol[symbol]?.length > 0 ? (
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
                 {signalsBySymbol[symbol].map(renderSignalCard)}
               </div>
