@@ -32,3 +32,20 @@ export interface RiskMetrics {
   riskPercentage: number;
   recommendedLotSize: number;
 }
+
+export interface MarketCard {
+  id: string;
+  symbol: string;
+  price: number;
+  ema8: number;
+  ema20: number;
+  ema50: number;
+  macd: {
+    line: number;
+    signal: number;
+    histogram: number;
+  };
+  signal?: ForexSignal;
+  isLoading: boolean;
+  lastUpdated: Date;
+}

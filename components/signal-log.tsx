@@ -6,9 +6,14 @@ import { TrendingUp, TrendingDown, Minus, Send, AlertCircle } from 'lucide-react
 
 interface SignalLogProps {
   signals: ForexSignal[];
+  filterSymbol?: string;
 }
 
-export function SignalLog({ signals }: SignalLogProps) {
+export function SignalLog({ signals, filterSymbol }: SignalLogProps) {
+  const filteredSignals = filterSymbol 
+    ? signals.filter(s => s.symbol === filterSymbol)
+    : signals;
+
   const getSignalIcon = (signal: ForexSignal['signal']) => {
     switch (signal) {
       case 'BUY':
@@ -59,7 +64,7 @@ export function SignalLog({ signals }: SignalLogProps) {
     });
   };
 
-  if (signals.length === 0) {
+  if (filteredSignals.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">Recent Signals</h2>
@@ -78,11 +83,13 @@ export function SignalLog({ signals }: SignalLogProps) {
     <div className="rounded-xl border border-border bg-card p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-foreground">Recent Signals</h2>
-        <span className="text-sm text-muted-foreground">{signals.length} signals</span>
+        <span className="text-sm text-muted-foreground">
+          {filterSymbol ? `${filteredSignals.length} signals for ${filterSymbol}` : `${filteredSignals.length} signals`}
+        </span>
       </div>
       
       <div className="space-y-3 max-h-[600px] overflow-y-auto">
-        {signals.map((signal) => (
+        {filteredSignals.map((signal) => (
           <div 
             key={signal.id}
             className="p-4 rounded-lg border border-border bg-background hover:bg-muted/30 transition-colors"
