@@ -22,17 +22,17 @@ import {
 interface MarketCardProps {
   card: MarketCardType;
   isSelected: boolean;
+  accountBalance: number;
   onSelect: () => void;
   onRemove: () => void;
   onAnalyze: (data: MarketCardType) => Promise<ForexSignal | null>;
   onUpdate: (card: MarketCardType) => void;
 }
 
-const ACCOUNT_BALANCE = 27;
-
 export function MarketCard({ 
   card, 
-  isSelected, 
+  isSelected,
+  accountBalance,
   onSelect, 
   onRemove, 
   onAnalyze,
@@ -93,11 +93,11 @@ export function MarketCard({
     }
   };
 
-  // Calculate risk for $27 account
+  // Calculate risk based on account balance
   const calculateRisk = () => {
     if (!card.signal) return null;
-    const maxRiskPerTrade = ACCOUNT_BALANCE * 0.02; // 2% risk
-    const recommendedLot = (ACCOUNT_BALANCE * 0.01) / 100;
+    const maxRiskPerTrade = accountBalance * 0.02; // 2% risk
+    const recommendedLot = (accountBalance * 0.01) / 100;
     return {
       maxRisk: maxRiskPerTrade,
       lotSize: recommendedLot,

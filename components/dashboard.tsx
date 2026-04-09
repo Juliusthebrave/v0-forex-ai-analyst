@@ -6,6 +6,7 @@ import { RiskMeter } from './risk-meter';
 import { SignalLog } from './signal-log';
 import { MarketCard } from './market-card';
 import { SearchBar } from './search-bar';
+import { BalanceCard } from './balance-card';
 import type { ForexSignal, MarketCard as MarketCardType } from '@/lib/types';
 import { Activity, TrendingUp, TrendingDown, BarChart3, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,13 +14,12 @@ import { cn } from '@/lib/utils';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const ACCOUNT_BALANCE = 27;
-
 export function Dashboard() {
   const { data, mutate } = useSWR<{ signals: ForexSignal[] }>('/api/signals', fetcher, {
     refreshInterval: 5000,
   });
 
+  const [accountBalance, setAccountBalance] = useState(27);
   const [markets, setMarkets] = useState<MarketCardType[]>([]);
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -66,6 +66,7 @@ export function Dashboard() {
           ema20: card.ema20,
           ema50: card.ema50,
           macd: card.macd,
+          accountBalance,
         }),
       });
 
@@ -80,7 +81,7 @@ export function Dashboard() {
       console.error('Failed to analyze:', error);
       return null;
     }
-  }, [signals, mutate]);
+  }, [signals, mutate, accountBalance]);
 
   // Calculate stats
   const todaySignals = signals.filter(s => {
@@ -115,7 +116,7 @@ export function Dashboard() {
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50">
                 <span className="text-sm text-muted-foreground">Balance:</span>
-                <span className="font-bold text-foreground">${ACCOUNT_BALANCE}</span>
+                <span className="font-bold text-foreground">${accountBalance.toFixed(2)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -218,6 +219,7 @@ export function Dashboard() {
                   key={market.id}
                   card={market}
                   isSelected={selectedMarketId === market.id}
+                  accountBalance={accountBalance}
                   onSelect={() => setSelectedMarketId(market.id)}
                   onRemove={() => handleRemoveMarket(market.id)}
                   onAnalyze={handleAnalyze}
@@ -241,12 +243,16 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Main Grid - Risk Meter & Signal Log */}
+        {/* Main Grid - Balance, Risk Meter & Signal Log */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Risk Meter */}
-          <div className="lg:col-span-1">
+          {/* Left Column - Balance & Risk Meter */}
+          <div className="lg:col-span-1 space-y-6">
+            <BalanceCard 
+              balance={accountBalance} 
+              onBalanceChange={setAccountBalance} 
+            />
             <RiskMeter 
-              accountBalance={ACCOUNT_BALANCE} 
+              accountBalance={accountBalance} 
               selectedMarket={selectedMarket}
               allMarkets={markets}
             />

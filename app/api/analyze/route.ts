@@ -26,6 +26,15 @@ TECHNICAL ANALYSIS GUIDELINES:
 - Positive MACD histogram: Increasing bullish momentum
 - Negative MACD histogram: Increasing bearish momentum
 
+ACCOUNT SIZE RISK GUIDELINES:
+You will receive the trader's account balance. Adjust your risk assessment accordingly:
+- Micro accounts (<$50): Be VERY conservative. Recommend only high-probability setups. Warn about leverage risks.
+- Mini accounts ($50-$200): Conservative approach. Focus on major pairs with lower volatility.
+- Small accounts ($200-$1000): Standard retail advice. Balance opportunity with risk management.
+- Standard accounts (>$1000): Normal trading recommendations with proper position sizing.
+
+Always tailor lot size recommendations and risk levels to the specific account balance provided.
+
 Provide a concise but thorough analysis combining technical indicators with geopolitical context. Be specific about how current events might affect the currency pair.`;
 
 const analysisSchema = z.object({
@@ -37,8 +46,8 @@ const analysisSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const body: ForexSignalRequest = await req.json();
-    const { symbol, price, ema8, ema20, ema50, macd } = body;
+    const body: ForexSignalRequest & { accountBalance?: number } = await req.json();
+    const { symbol, price, ema8, ema20, ema50, macd, accountBalance = 27 } = body;
 
     // Validate required fields
     if (!symbol || typeof price !== 'number') {
@@ -48,8 +57,18 @@ export async function POST(req: Request) {
       );
     }
 
+    const maxRiskPerTrade = accountBalance * 0.02;
+    const recommendedLot = (accountBalance * 0.01) / 100;
+    const accountCategory = accountBalance < 50 ? 'Micro' : accountBalance < 200 ? 'Mini' : accountBalance < 1000 ? 'Small' : 'Standard';
+
     const userPrompt = `Analyze this Forex data and provide a trading signal:
 
+TRADER ACCOUNT INFO:
+Account Balance: $${accountBalance.toFixed(2)} (${accountCategory} Account)
+Max Risk Per Trade (2%): $${maxRiskPerTrade.toFixed(2)}
+Recommended Lot Size: ${recommendedLot.toFixed(3)} lots
+
+MARKET DATA:
 Symbol: ${symbol}
 Current Price: ${price}
 EMA 8: ${ema8}
