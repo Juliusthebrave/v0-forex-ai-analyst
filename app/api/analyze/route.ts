@@ -1,6 +1,6 @@
 import { generateText, Output } from 'ai';
 import { z } from 'zod';
-import { addSignal } from '@/lib/signal-store';
+import { createClient } from '@/lib/supabase/server';
 import { sendTelegramSignal } from '@/lib/telegram';
 import type { ForexSignalRequest, ForexSignal, SignalType } from '@/lib/types';
 
@@ -103,19 +103,6 @@ Provide your analysis considering both technical indicators and current April 20
       );
     }
 
-    // Create signal record
-    const forexSignal: ForexSignal = {
-      id: crypto.randomUUID(),
-      symbol,
-      signal: aiResponse.signal as SignalType,
-      price,
-      analysis: aiResponse.analysis,
-      confidence: aiResponse.confidence,
-      riskLevel: aiResponse.riskLevel,
-      timestamp: new Date(),
-      telegramSent: false,
-    };
-
     // Send to Telegram
     const telegramSent = await sendTelegramSignal({
       symbol,
@@ -126,10 +113,39 @@ Provide your analysis considering both technical indicators and current April 20
       riskLevel: aiResponse.riskLevel,
     });
 
-    forexSignal.telegramSent = telegramSent;
+    // Save signal to Supabase
+    const supabase = await createClient();
+    const { data: insertedSignal, error: dbError } = await supabase
+      .from('signals')
+      .insert({
+        symbol,
+        signal: aiResponse.signal,
+        price,
+        analysis: aiResponse.analysis,
+        confidence: aiResponse.confidence,
+        risk_level: aiResponse.riskLevel,
+        telegram_sent: telegramSent,
+      })
+      .select()
+      .single();
 
-    // Store signal
-    addSignal(forexSignal);
+    if (dbError) {
+      console.error('[v0] Supabase insert error:', dbError);
+      // Still return the signal even if DB save fails
+    }
+
+    // Create signal response object
+    const forexSignal: ForexSignal = {
+      id: insertedSignal?.id ?? crypto.randomUUID(),
+      symbol,
+      signal: aiResponse.signal as SignalType,
+      price,
+      analysis: aiResponse.analysis,
+      confidence: aiResponse.confidence,
+      riskLevel: aiResponse.riskLevel,
+      timestamp: insertedSignal?.created_at ? new Date(insertedSignal.created_at) : new Date(),
+      telegramSent,
+    };
 
     return Response.json({
       success: true,
