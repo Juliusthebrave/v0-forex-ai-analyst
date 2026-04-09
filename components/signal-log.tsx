@@ -240,16 +240,26 @@ export function SignalLog({ signals }: SignalLogProps) {
                 </span>
               )}
               {trackedSymbols.length > 1 && (
-                <button
+                <span
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     handleRemoveSymbol(symbol);
                   }}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-destructive/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleRemoveSymbol(symbol);
+                    }
+                  }}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-destructive/20 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   aria-label={`Remove ${symbol}`}
                 >
                   <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                </button>
+                </span>
               )}
             </TabsTrigger>
           ))}
